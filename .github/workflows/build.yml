@@ -5,12 +5,34 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v5
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      
+      - uses: actions/setup-java@v4
         with:
           java-version: '11'
           distribution: 'temurin'
-      - run: pip install buildozer kivy cython
-      - run: buildozer android debug
+      
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+      
+      - name: Install Android SDK components
+        run: |
+          sdkmanager "build-tools;31.0.0"
+          sdkmanager "platforms;android-31"
+          sdkmanager "ndk;25.1.8937393"
+      
+      - name: Install build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install cython==0.29.36 buildozer kivy
+      
+      - name: Build APK
+        run: buildozer android debug
+      
       - uses: actions/upload-artifact@v4
         with:
           name: apk
