@@ -16,58 +16,51 @@ jobs:
           java-version: "11"
           distribution: "temurin"
       
-      - name: Install dependencies
+      - name: Install deps
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            build-essential \
-            git \
-            zip \
-            unzip \
-            wget \
-            python3-dev \
-            libffi-dev \
-            libssl-dev
+          sudo apt-get update -qq
+          sudo apt-get install -y build-essential git zip unzip wget python3-dev libffi-dev libssl-dev ant
       
-      - name: Install Buildozer and Cython
-        run: |
-          pip install --upgrade pip setuptools wheel
-          pip install buildozer cython
+      - name: Install build tools
+        run: pip install --quiet buildozer cython
       
-      - name: Setup Android SDK/NDK
+      - name: Setup Android
         run: |
           mkdir -p ~/.buildozer/android/platform/android-sdk
           cd ~/.buildozer/android/platform/android-sdk
-          wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
           unzip -q commandlinetools-linux-11076708_latest.zip
-          yes | cmdline-tools/bin/sdkmanager --sdk_root=. \
-            "platform-tools" \
-            "platforms;android-31" \
-            "build-tools;31.0.0" \
-            "ndk;25.1.8937393" || true
+          mkdir -p android-sdk/cmdline-tools/latest
+          mv cmdline-tools/* android-sdk/cmdline-tools/latest/ 2>/dev/null || true
+          cd android-sdk && yes 2>/dev/null | cmdline-tools/latest/bin/sdkmanager --sdk_root=. \
+            "platform-tools" "platforms;android-31" "build-tools;31.0.0" "ndk;25.1.8937393" >/dev/null 2>&1 || true
       
       - name: Build APK
         run: |
           export ANDROID_SDK_ROOT=~/.buildozer/android/platform/android-sdk
           export ANDROID_NDK_ROOT=$ANDROID_SDK_ROOT/ndk/25.1.8937393
-          buildozer android debug -v 2>&1 | tail -100 | tee build_output.txt
+          export PATH=$PATH:$ANDROID_SDK_ROOT/cmdline-tools/latest/bin:$ANDROID_SDK_ROOT/platform-tools
           
-      - name: Check results
-        if: always()
-        run: |
-          echo "=== Checking for APK ===" 
-          find ~/.buildozer -name "*.apk" 2>/dev/null | head
-          ls -la bin/ 2>/dev/null || echo "No bin dir"
-          if [ -f build_output.txt ]; then
-            echo ""
-            echo "=== Build output (last lines) ==="
-            tail -30 build_output.txt
-          fi
+          echo "Starting buildozer..."
+          buildozer android debug --no-strip 2>&1 | tee build.log || echo "Buildozer exited with: $?"
+          
+          echo ""
+          echo "=== Checking for APK ==="
+          find ~/.buildozer -name "*.apk" -ls 2>/dev/null | head -20
+          find . -name "*.apk" -ls 2>/dev/null
+          
+          echo ""
+          echo "=== Last 50 lines of build.log ==="
+          tail -50 build.log
+          
+          echo ""
+          echo "=== Listing bin directory ==="
+          ls -lah bin/ || echo "No bin directory"
       
       - name: Upload APK
-        if: always()
         uses: actions/upload-artifact@v4
+        if: always()
         with:
           name: pochunter-apk
           path: bin/*.apk
-          if-no-files-found: warn
+          if-no-files-found: ignore
