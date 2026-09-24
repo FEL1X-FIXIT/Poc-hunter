@@ -3,11 +3,11 @@ on: [push]
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
       
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
       
@@ -16,14 +16,9 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
       
-      - name: Install dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential libffi-dev libjpeg-turbo-dev zlib1g-dev
-          pip install --upgrade pip cython==0.29.36 buildozer kivy
-      
-      - name: Build APK
-        run: buildozer android debug
+      - run: |
+          pip install --upgrade pip cython buildozer kivy
+          buildozer android debug
       
       - uses: actions/upload-artifact@v4
         with:
