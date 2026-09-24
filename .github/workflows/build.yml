@@ -6,26 +6,24 @@ jobs:
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
-      
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      
       - uses: actions/setup-java@v4
         with:
           java-version: '17'
           distribution: 'temurin'
       
-      - name: Setup Android SDK in buildozer location
+      - name: Setup Android SDK
         run: |
           mkdir -p ~/.buildozer/android/platform/android-sdk
           cd ~/.buildozer/android/platform/android-sdk
-          wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
           unzip -q commandlinetools-linux-11076708_latest.zip
           mkdir -p cmdline-tools/latest
           mv cmdline-tools/* cmdline-tools/latest/ 2>/dev/null || true
-          export PATH=$PATH:~/.buildozer/android/platform/android-sdk/cmdline-tools/latest/bin
-          yes | sdkmanager --sdk_root=~/.buildozer/android/platform/android-sdk "platforms;android-31" "build-tools;31.0.0" "ndk;25.1.8937393"
+          ln -s cmdline-tools/latest tools
+          ./tools/bin/sdkmanager --sdk_root=. "platforms;android-31" "build-tools;31.0.0" "ndk;25.1.8937393" <<< "y"
       
       - name: Build APK
         run: |
