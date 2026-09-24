@@ -74,19 +74,26 @@ jobs:
           export ANDROID_NDK_ROOT=$ANDROID_SDK_ROOT/ndk/25.1.8937393
           buildozer android debug 2>&1 | tee build.log
           
-      - name: Check build output
+      - name: Find and copy APK
         if: always()
         run: |
-          if [ -f build.log ]; then
-            echo "=== Build Log (last 100 lines) ===" 
-            tail -100 build.log
-          fi
-          ls -la bin/ 2>/dev/null || echo "No bin directory"
+          echo "=== Looking for APK files ==="
+          find . -name "*.apk" -type f 2>/dev/null | head -20
+          find ~/.buildozer -name "*.apk" -type f 2>/dev/null | head -20
+          
+          # Copy APK to bin directory for upload
+          mkdir -p bin
+          find ~/.buildozer -name "*.apk" -type f -exec cp {} bin/ \;
+          ls -lah bin/ || echo "No bin directory"
+          
+          echo "=== Last 50 lines of build log ==="
+          tail -50 build.log || true
       
       - name: Upload APK artifact
-        if: success()
         uses: actions/upload-artifact@v4
+        if: always()
         with:
-          name: apk
-          path: bin/pochunter-*.apk
+          name: apk-build
+          path: bin/*.apk
+          if-no-files-found: warn
           retention-days: 30
