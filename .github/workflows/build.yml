@@ -1,25 +1,25 @@
-name: Build and Test
+name: Build APK
 on: [push, workflow_dispatch]
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
+    container: 
+      image: madlord/buildozer:latest
+      options: --user root
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
       
-      - name: Install dependencies
+      - name: Build with Buildozer
         run: |
-          pip install requests urllib3 kivy
+          cd /root
+          cp -r /github/workspace/* .
+          buildozer android debug 2>&1 | tail -50
+          
+      - name: Copy APK
+        run: cp -v /root/bin/*.apk /github/workspace/bin/ 2>/dev/null || echo "APK not found"
       
-      - name: Run POC Hunter logic
-        run: |
-          python poc_hunter_logic.py || echo "Logic test completed"
-      
-      - name: Upload artifacts
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: test-results
-          path: .
-          if-no-files-found: warn
+          name: pochunter-apk
+          path: bin/*.apk
