@@ -16,8 +16,26 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
       
-      - run: |
-          pip install --upgrade pip cython buildozer kivy
+      - name: Download Android SDK
+        run: |
+          mkdir -p ~/android-sdk
+          cd ~/android-sdk
+          wget https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          unzip -q commandlinetools-linux-11076708_latest.zip
+          mkdir -p cmdline-tools/latest
+          mv cmdline-tools/* cmdline-tools/latest/ 2>/dev/null || true
+      
+      - name: Install SDK components
+        run: |
+          export ANDROID_SDK_ROOT=~/android-sdk
+          export PATH=$PATH:~/android-sdk/cmdline-tools/latest/bin
+          yes | sdkmanager --sdk_root=$ANDROID_SDK_ROOT "platforms;android-31" "build-tools;31.0.0" "ndk;25.1.8937393"
+      
+      - name: Build APK
+        run: |
+          export ANDROID_SDK_ROOT=~/android-sdk
+          export ANDROID_NDK_ROOT=~/android-sdk/ndk/25.1.8937393
+          pip install cython buildozer kivy
           buildozer android debug
       
       - uses: actions/upload-artifact@v4
